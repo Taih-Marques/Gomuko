@@ -21,26 +21,31 @@ public class Main {
     public static void main(String[] args)
             throws MalformedURLException, RemoteException, NotBoundException, ServerNotActiveException,
             InterruptedException {
-
+        // Menu inicial
+        System.out.println("Bem-vindo ao Gomuko!");
         System.out.println("Digite uma opção:");
         System.out.println("1 - Criar uma partida");
         System.out.println("2 - Conectar-se a uma partida");
         int opcao = scanner.nextInt();
 
+        // precisa pra não bugar a próxima leitura
+        scanner.nextLine();
+
         if (opcao == 1) {
             criarPartida();
         } else if (opcao == 2) {
             System.out.println("Digite o endereço do servidor:");
-            // String url = scanner.next();
-            String url = "localhost";
+            String url = scanner.nextLine();
+            // String url = "localhost";
             System.out.println("Digite a porta do servidor:");
-            // int porta = scanner.nextInt();
-            int porta = 5000;
+            int porta = scanner.nextInt();
+            // int porta = 5000;
+
             conectarPartida('O', url, porta);
         } else {
             System.out.println("Opção inválida. Tente novamente.");
-        }
 
+        }
         scanner.close();
     }
 
@@ -48,6 +53,7 @@ public class Main {
             throws RemoteException, MalformedURLException, NotBoundException, ServerNotActiveException,
             InterruptedException {
 
+        // cria o cliente e conecta com o servidor
         AcoesCliente acoes = iniciarCliente(url, porta);
         if (!acoes.conectar(jogador)) {
             System.out.println("Conexão falhou. Tente novamente.");
@@ -55,16 +61,21 @@ public class Main {
         }
         System.out.println("Conectado com sucesso!");
 
-        EstadoJogo ultimoEstado = null;
+        // Guarda o estado mais recente recebido do servidor
+        EstadoJogo estadoAtual = null;
         while (true) {
             Thread.sleep(2000);
 
+            // chamada remota (RMI)
             var estado = acoes.verificarEstado();
-            if (ultimoEstado != null && estado.getId().equals(ultimoEstado.getId())) {
+
+            if (estadoAtual != null && estado.getId().equals(estadoAtual.getId())) {
+                // se for o mesmo estado, não repetir a ação
                 continue;
             }
 
-            ultimoEstado = estado;
+            // atualiza estado
+            estadoAtual = estado;
             estado.getTabuleiro().print();
 
             switch (estado.getStatus()) {
@@ -93,6 +104,7 @@ public class Main {
     public static void criarPartida()
             throws RemoteException, MalformedURLException, NotBoundException, ServerNotActiveException,
             InterruptedException {
+        // cria tanto o servidor quanto um cliente pro jogador 1
         var jogo = new Gomuko(jogadorInicial);
         iniciarServidor("localhost", 5000, jogo);
 
@@ -111,6 +123,7 @@ public class Main {
         System.out.print("Digite o número da coluna: ");
         int coluna = scanner.nextInt();
 
+        // chamada remota (RMI)
         var erro = acoes.realizarJogada(jogador, linha, coluna);
 
         if (erro != null) {
@@ -128,14 +141,12 @@ public class Main {
         LocateRegistry.createRegistry(porta);
 
         // Binds the remote object by the name
-        // geeksforgeeks
         Naming.rebind("rmi://" + url + ":" + porta + "/gomuko", servidor);
     }
 
     public static AcoesCliente iniciarCliente(String url, int porta)
             throws NotBoundException, MalformedURLException, RemoteException {
-        // lookup method to find reference of remote object
+        // procurar servidor
         return (AcoesCliente) Naming.lookup("rmi://" + url + ":" + porta + "/gomuko");
     }
-
 }

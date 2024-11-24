@@ -32,6 +32,7 @@ public class Servidor extends UnicastRemoteObject
         }
 
         var novoCliente = new Jogador(RemoteServer.getClientHost(), id);
+        // guardar novo jogador
         this.jogadores.add(novoCliente);
 
         System.out.println("*[Servidor] Jogador " + id + " conectado.");
@@ -55,13 +56,6 @@ public class Servidor extends UnicastRemoteObject
             throws RemoteException, ServerNotActiveException {
         System.out.println("*[Servidor] Jogador " + gomuko.getIdJogadorAtual() + ": L" + linha + " | C" + coluna);
 
-        // var host = RemoteServer.getClientHost();
-        // var clienteOpt = buscarJogadorPorHost(host);
-
-        // if (clienteOpt.isEmpty()) {
-        // return "Jogador não está na partida.";
-        // }
-
         Jogador jogador = buscarJogadorPorId(idJogador).get();
         if (!gomuko.estaNaVez(jogador.getId())) {
             System.out.println("*[Servidor] Não é a vez do jogador " + jogador.getId());
@@ -70,14 +64,19 @@ public class Servidor extends UnicastRemoteObject
 
         String erro = gomuko.jogar(linha, coluna);
 
+        // alterar estado em segundo plano
+        // pra nao travar travar a resposta da jogada
         alterarEstado(erro == null);
 
         return erro;
     }
 
     private void alterarEstado(boolean jogadaValida) {
+        // executar em segundo plano
         CompletableFuture.runAsync(() -> {
             if (!jogadaValida) {
+                // jogada invalida, manter estado atual (TURNO do jogador)
+                // e resetar apenas ID pra forçar nova jogada
                 this.estado.atualizarId();
                 return;
             }
@@ -85,8 +84,10 @@ public class Servidor extends UnicastRemoteObject
             if (gomuko.verificarVencedor()) {
                 System.out.println("*[Servidor] Jogador " + gomuko.getIdJogadorAtual() + " venceu!");
                 status = Status.VITORIA;
+                // finaliza a execução do jogo no jogador 1
                 gomuko.setJogoAtivo(false);
             } else {
+                // troca o jogador
                 gomuko.proximoTurno();
                 System.out.println("*[Servidor] Vez do jogador " + gomuko.getIdJogadorAtual());
                 status = Status.TURNO;
@@ -96,13 +97,17 @@ public class Servidor extends UnicastRemoteObject
     }
 
     public Optional<Jogador> buscarJogadorPorHost(String host) {
+        // busca na lista de jogadores
         return this.jogadores.stream()
+                // o que tiver o host igual
                 .filter(c -> c.getHost().equals(host))
                 .findAny();
     }
 
     public Optional<Jogador> buscarJogadorPorId(char id) {
+        // busca na lista de jogadores
         return this.jogadores.stream()
+                // o que tiver o id igual
                 .filter(c -> c.getId().equals(id))
                 .findAny();
     }

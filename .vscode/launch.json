@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "Main",
+            "projectName": "Gomuko_f91d2ff5"
+        },
+        {
             "name": "Jogador 1",
             "type": "java",
             "request": "launch",
